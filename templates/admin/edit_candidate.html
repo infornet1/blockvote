@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Edit Candidate</h1>
+
+<form method="post">
+    <div class="mb-3">
+        <label for="name" class="form-label">Candidate Name</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ candidate.name }}" required>
+    </div>
+    <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="active" name="active" {% if candidate.active %}checked{% endif %}>
+        <label class="form-check-label" for="active">Active</label>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('manage_candidates') }}" class="btn btn-secondary">Cancel</a>
+</form>
+{% endblock %}

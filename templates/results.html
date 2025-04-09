@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Voting Results</h1>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Total Votes: {{ total_votes }}</h5>
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Candidate</th>
+                    <th>Votes</th>
+                    <th>Percentage</th>
+                    <th>Visualization</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for candidate in candidates %}
+                <tr>
+                    <td>{{ candidate.name }}</td>
+                    <td>{{ candidate.votes }}</td>
+                    <td>{{ candidate.percentage|default(0)|round(1) }}%</td>
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: {{ candidate.percentage|default(0) }}%" 
+                                 aria-valuenow="{{ candidate.percentage|default(0) }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Voting</a>
+    </div>
+</div>
+{% endblock %}

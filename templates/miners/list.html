@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Miner Rankings</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Address</th>
+            <th>Balance</th>
+            <th>Blocks Mined</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for miner in miners %}
+        <tr>
+            <td><code>{{ miner.address }}</code></td>
+            <td>{{ miner.balance }}</td>
+            <td>{{ miner.total_blocks_mined }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<a href="{{ url_for('mine') }}" class="btn btn-primary">Start Mining</a>
+{% endblock %}

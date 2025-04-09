@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Mine New Blocks</h1>
+<form method="post">
+    <div class="mb-3">
+        <label for="miner_address" class="form-label">Miner Address (optional)</label>
+        <input type="text" class="form-control" id="miner_address" name="miner_address">
+        <div class="form-text">Leave blank for anonymous mining</div>
+    </div>
+    <button type="submit" class="btn btn-success">Start Mining</button>
+</form>
+{% endblock %}

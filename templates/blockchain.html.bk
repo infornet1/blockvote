@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blockchain Explorer</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Voting Blockchain</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <table>
+        <tr>
+            <th>Block ID</th>
+            <th>Previous Hash</th>
+            <th>Timestamp</th>
+            <th>Voter ID</th>
+            <th>Candidate</th>
+            <th>Block Hash</th>
+        </tr>
+        {% for block in blocks %}
+        <tr>
+            <td>{{ block.id }}</td>
+            <td>{{ block.previous_hash_short }}...</td>
+            <td>{{ block.timestamp }}</td>
+            <td>{{ block.voter_id }}</td>
+            <td>{{ block.candidate_name }} (ID: {{ block.candidate_id }})</td>
+            <td>{{ block.hash_short }}...</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6">No blocks in the chain yet</td>
+        </tr>
+        {% endfor %}
+    </table>
+    
+    <p><a href="/">Back to Voting</a> | <a href="/results">View Results</a></p>
+</body>
+</html>~

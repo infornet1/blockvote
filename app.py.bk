@@ -1,0 +1,256 @@
+import os
+from flask import Flask, render_template, request, redirect, url_for, flash
+import pymysql
+from pymysql.cursors import DictCursor
+from datetime import datetime
+import hashlib
+import json
+import random
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+
+# Database configuration
+db_config = {
+    'host': 'localhost',
+    'user': 'voteadmin',
+    'password': 'your_secure_password',
+    'db': 'blockchain_vote',
+    'cursorclass': DictCursor
+}
+
+def get_db():
+    return pymysql.connect(**db_config)
+
+def calculate_hash(block):
+    """Calculate SHA-256 hash of a block"""
+    block_string = json.dumps(block, sort_keys=True).encode()
+    return hashlib.sha256(block_string).hexdigest()
+
+@app.route('/')
+def index():
+    """Show voting interface"""
+    try:
+        with get_db() as db:
+            with db.cursor() as cur:
+                cur.execute("SELECT * FROM candidates WHERE active = TRUE ORDER BY name")
+                candidates = cur.fetchall()
+        return render_template('index.html', candidates=candidates)
+    except Exception as e:
+        flash(f"Database error: {str(e)}")
+        return render_template('index.html', candidates=[])
+
+@app.route('/vote', methods=['POST'])
+def vote():
+    """Process a vote"""
+    voter_id = request.form.get('voter_id')
+    candidate_id = request.form.get('candidate_id')
+    if not voter_id or not candidate_id:
+        flash("Missing voter ID or candidate selection")
+        return redirect(url_for('index'))
+    
+    try:
+        with get_db() as db:
+            with db.cursor() as cur:
+                # Check if voter already exists
+                cur.execute("SELECT 1 FROM blocks WHERE voter_id = %s", (voter_id,))
+                if cur.fetchone():
+                    flash("Error: You have already voted!")
+                    return redirect(url_for('index'))
+                
+                # Get previous block
+                cur.execute("SELECT hash FROM blocks ORDER BY id DESC LIMIT 1")
+                last_block = cur.fetchone()
+                previous_hash = last_block['hash'] if last_block else "0"  # Genesis block
+                
+                # Create new block
+                proof = 123  # Simplified for demo
+                block = {
+                    'previous_hash': previous_hash,
+                    'timestamp': str(datetime.now()),
+                    'proof': proof,
+                    'voter_id': voter_id,
+                    'candidate_id': candidate_id
+#		    'hash': ''  # Will be calculated
+                }
+                block_hash = calculate_hash(block)
+@app.route('/results')
+def results():
+    """Show voting results"""
+    try:
+        with get_db() as db:
+            with db.cursor() as cur:
+                cur.execute("""
+                    SELECT c.id, c.name, c.votes,
+                           ROUND(100 * c.votes / NULLIF((SELECT SUM(votes) FROM candidates), 0), 1) as percentage
+                    FROM candidates c
+                    ORDER BY c.votes DESC
+                """)
+                candidates = cur.fetchall()
+                
+                cur.execute("SELECT COUNT(*) as total FROM blocks")
+                total = cur.fetchone()
+                total_votes = total['total'] if total else 0
+                
+        return render_template('results.html', 
+                           candidates=candidates, 
+                           total_votes=total_votes)
+    except Exception as e:
+        flash(f"Database error: {str(e)}")
+        return render_template('results.html', candidates=[], total_votes=0)
+
+@app.route('/blockchain')
+def blockchain():
+    """Show all blocks"""
+    try:
+        with get_db() as db:
+            with db.cursor() as cur:
+                cur.execute("""
+                    SELECT b.id, 
+                           LEFT(b.previous_hash, 10) as previous_hash_short,
+                           b.timestamp, 
+                           b.voter_id, 
+                           b.candidate_id, 
+                           LEFT(b.hash, 10) as hash_short,
+                           c.name AS candidate_name
+                    FROM blocks b
+                    JOIN candidates c ON b.candidate_id = c.id
+                    ORDER BY b.id
+                """)
+                blocks = cur.fetchall()
+        return render_template('blockchain.html', blocks=blocks)
+    except Exception as e:
+        flash(f"Database error: {str(e)}")
+        return render_template('blockchain.html', blocks=[])
+
+@app.route('/admin/candidates')
+def manage_candidates():
+    """Admin interface for managing candidates"""
+    try:
+        with get_db() as db:
+            with db.cursor() as cur:
+                cur.execute("SELECT * FROM candidates ORDER BY name")
+                candidates = cur.fetchall()
+        return render_template('admin/candidates.html', candidates=candidates)
+    except Exception as e:
+        flash(f"Database error: {str(e)}", 'error')
+        return redirect(url_for('index'))
+
+@app.route('/admin/candidates/add', methods=['GET', 'POST'])
+def add_candidate():
+    """Add a new candidate"""
+    if request.method == 'POST':
+        name = request.form.get('name')
+        if not name:
+            flash("Candidate name is required", 'error')
+            return redirect(url_for('add_candidate'))
+        
+        try:
+            with get_db() as db:
+                with db.cursor() as cur:
+                    # Generate a unique ID for the candidate
+                    cur.execute("SELECT MAX(id) as max_id FROM candidates")
+                    max_id = cur.fetchone()['max_id']
+                    new_id = str(int(max_id) + 1) if max_id and max_id.isdigit() else '1'
+                    
+                    cur.execute(
+                        "INSERT INTO candidates (id, name) VALUES (%s, %s)",
+                        (new_id, name.strip())
+                    )
+                    db.commit()
+            flash("Candidate added successfully!", 'success')
+            return redirect(url_for('manage_candidates'))
+        except Exception as e:
+            flash(f"Error adding candidate: {str(e)}", 'error')
+    
+    return render_template('admin/add_candidate.html')
+
+@app.route('/admin/candidates/edit/<candidate_id>', methods=['GET', 'POST'])
+def edit_candidate(candidate_id):
+    """Edit an existing candidate"""
+    try:
+        with get_db() as db:
+            with db.cursor() as cur:
+                cur.execute("SELECT * FROM candidates WHERE id = %s", (candidate_id,))
+                candidate = cur.fetchone()
+                
+                if not candidate:
+                    flash("Candidate not found", 'error')
+                    return redirect(url_for('manage_candidates'))
+                
+                if request.method == 'POST':
+                    new_name = request.form.get('name')
+                    active = request.form.get('active') == 'on'
+                    
+                    if not new_name:
+                        flash("Candidate name is required", 'error')
+                    else:
+                        cur.execute(
+                            "UPDATE candidates SET name = %s, active = %s WHERE id = %s",
+                            (new_name.strip(), active, candidate_id)
+                        )
+                        db.commit()
+                        flash("Candidate updated successfully!", 'success')
+                        return redirect(url_for('manage_candidates'))
+                
+        return render_template('admin/edit_candidate.html', candidate=candidate)
+    except Exception as e:
+        flash(f"Database error: {str(e)}", 'error')
+        return redirect(url_for('manage_candidates'))
+
+@app.route('/admin/candidates/delete/<candidate_id>', methods=['POST'])
+def delete_candidate(candidate_id):
+    """Delete a candidate (soft delete)"""
+    try:
+        with get_db() as db:
+            with db.cursor() as cur:
+                # Check if candidate has votes
+                cur.execute("SELECT COUNT(*) as vote_count FROM blocks WHERE candidate_id = %s", (candidate_id,))
+                vote_count = cur.fetchone()['vote_count']
+                
+                if vote_count > 0:
+                    # Can't delete, so deactivate
+                    cur.execute(
+                        "UPDATE candidates SET active = FALSE WHERE id = %s",
+                        (candidate_id,)
+                    )
+                    db.commit()
+                    flash("Candidate has votes and cannot be deleted. Marked as inactive instead.", 'warning')
+                else:
+                    # No votes, safe to delete
+                    cur.execute(
+                        "DELETE FROM candidates WHERE id = %s",
+                        (candidate_id,)
+                    )
+                    db.commit()
+                    flash("Candidate deleted successfully!", 'success')
+    except Exception as e:
+        flash(f"Error deleting candidate: {str(e)}", 'error')
+    
+    return redirect(url_for('manage_candidates'))
+
+@app.route('/admin/reset_votes', methods=['GET', 'POST'])
+#@requires_auth  # Use the authentication decorator you created earlier
+def reset_votes():
+    if request.method == 'POST':
+        try:
+            with get_db() as db:
+                with db.cursor() as cur:
+                    # Clear all votes from blockchain
+                    cur.execute("TRUNCATE TABLE blocks")
+                    
+                    # Reset candidate counts
+                    cur.execute("UPDATE candidates SET votes = 0")
+                    
+                    # Reset voter status
+                    cur.execute("UPDATE voters SET has_voted = FALSE")
+                    
+                    db.commit()
+            flash("All votes have been reset successfully!", "success")
+        except Exception as e:
+            flash(f"Error resetting votes: {str(e)}", "error")
+        return redirect(url_for('manage_candidates'))
+    
+    return render_template('admin/reset_votes.html')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

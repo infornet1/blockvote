@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Theta Blockchain Explorer</h1>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Block ID</th>
+                        <th>Previous Hash</th>
+                        <th>Timestamp</th>
+                        <th>Voter ID</th>
+                        <th>Candidate</th>
+                        <th>Block Hash</th>
+			<th>Miner</th>
+			<th>Nonce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for block in blocks %}
+                    <tr>
+                        <td>{{ block.id }}</td>
+                        <td><code>{{ block.previous_hash_short }}...</code></td>
+                        <td>{{ block.timestamp }}</td>
+                        <td>{{ block.voter_id }}</td>
+                        <td>{{ block.candidate_name }}</td>
+                        <td><code>{{ block.hash_short }}...</code></td>
+                	<td>{{ block.miner_address or 'System' }}</td>
+			<td>{{ block.nonce }}</td>    
+		    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No blocks in the chain yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Voting</a>
+    </div>
+</div>
+{% endblock %}
