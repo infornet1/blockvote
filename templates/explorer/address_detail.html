@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Address: {{ address }}</h2>
+
+    {% if balance is not none %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Miner Information</h4>
+        </div>
+        <div class="card-body">
+            <p><strong>Balance:</strong> {{ balance }} TFUEL</p>
+            <p><strong>Total Blocks Mined:</strong> {{ mined_blocks|length }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Blocks Mined</h4>
+        </div>
+        <div class="card-body">
+            {% if mined_blocks %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Block</th>
+                            <th>Timestamp</th>
+                            <th>Hash</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for block in mined_blocks %}
+                        <tr>
+                            <td>{{ block.id }}</td>
+                            <td>{{ block.timestamp }}</td>
+                            <td>
+                                <a href="{{ url_for('block_detail', block_hash=block.hash) }}">
+                                    <code>{{ block.hash[:16] }}...</code>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p>No blocks mined by this address</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if votes %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Votes Cast</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Block</th>
+                            <th>Timestamp</th>
+                            <th>Candidate</th>
+                            <th>Hash</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vote in votes %}
+                        <tr>
+                            <td>{{ vote.id }}</td>
+                            <td>{{ vote.timestamp }}</td>
+                            <td>{{ vote.candidate_name }}</td>
+                            <td>
+                                <a href="{{ url_for('block_detail', block_hash=vote.hash) }}">
+                                    <code>{{ vote.hash[:16] }}...</code>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <a href="{{ url_for('blockchain') }}" class="btn btn-primary">
+        Back to Blockchain
+    </a>
+</div>
+{% endblock %}

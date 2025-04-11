@@ -1,58 +1,172 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Blockchain Explorer</title>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
-</head>
-<body>
-    <h1>Voting Blockchain</h1>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="flash-message {{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-    
-    <table>
-        <tr>
-            <th>Block ID</th>
-            <th>Previous Hash</th>
-            <th>Timestamp</th>
-            <th>Voter ID</th>
-            <th>Candidate</th>
-            <th>Block Hash</th>
-        </tr>
-        {% for block in blocks %}
-        <tr>
-            <td>{{ block.id }}</td>
-            <td>{{ block.previous_hash_short }}...</td>
-            <td>{{ block.timestamp }}</td>
-            <td>{{ block.voter_id }}</td>
-            <td>{{ block.candidate_name }} (ID: {{ block.candidate_id }})</td>
-            <td>{{ block.hash_short }}...</td>
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="6">No blocks in the chain yet</td>
-        </tr>
-        {% endfor %}
-    </table>
-    
-    <p><a href="/">Back to Voting</a> | <a href="/results">View Results</a></p>
-</body>
-</html>~
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Theta Blockchain Explorer</h1>
+
+    <!-- Search Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form action="{{ url_for('search') }}" method="GET" class="form-inline">
+                <div class="input-group w-100">
+                    <input type="text" name="q" class="form-control"
+                           placeholder="Search by block hash, height, or address (e.g. miner_1234)">
+                    <div class="input-group-append">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Blockchain Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Blocks</h5>
+                    <p class="card-text display-4">{{ blocks|length }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Difficulty</h5>
+                    <p class="card-text display-4">{{ DIFFICULTY }} zeros</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Mining Reward</h5>
+                    <p class="card-text display-4">{{ MINING_REWARD }} TFUEL</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blocks Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Latest Blocks</h4>
+                <small class="text-muted">Showing {{ blocks|length }} blocks</small>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Block</th>
+                            <th>Previous Hash</th>
+                            <th>Timestamp</th>
+                            <th>Voter/Miner</th>
+                            <th>Candidate</th>
+                            <th>Block Hash</th>
+                            <th>Nonce</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for block in blocks %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('block_detail', block_hash=block.hash) }}">
+                                    #{{ block.id }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if block.previous_hash != '0' %}
+                                <a href="{{ url_for('block_detail', block_hash=block.previous_hash) }}"
+                                   title="{{ block.previous_hash }}">
+                                    <code>{{ block.previous_hash|truncate(10, True, '...') }}</code>
+                                </a>
+                                {% else %}
+                                <code>Genesis</code>
+                                {% endif %}
+                            </td>
+                            <td>{{ block.timestamp }}</td>
+                            <td>
+                                {% if block.voter_id != 'mining_reward' %}
+                                <a href="{{ url_for('address_detail', address=block.voter_id) }}"
+                                   title="{{ block.voter_id }}">
+                                    {{ block.voter_id|truncate(10, True, '...') }}
+                                </a>
+                                {% else %}
+                                <a href="{{ url_for('address_detail', address=block.miner_address) }}"
+                                   title="{{ block.miner_address }}">
+                                    {{ block.miner_address|truncate(10, True, '...') }}
+                                </a>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if block.candidate_name %}
+                                {{ block.candidate_name }}
+                                {% else %}
+                                <span class="text-muted">Mining Reward</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('block_detail', block_hash=block.hash) }}"
+                                   title="{{ block.hash }}">
+                                    <code>{{ block.hash|truncate(10, True, '...') }}</code>
+                                </a>
+                            </td>
+                            <td>{{ block.nonce }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="alert alert-info">
+                                    No blocks in the chain yet.
+                                    <a href="{{ url_for('mine') }}">Mine the first block</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination would go here -->
+            <div class="d-flex justify-content-between mt-3">
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                    <i class="fas fa-vote-yea"></i> Back to Voting
+                </a>
+                <div>
+                    <a href="{{ url_for('mine') }}" class="btn btn-success">
+                        <i class="fas fa-hammer"></i> Mine Block
+                    </a>
+                    <a href="{{ url_for('list_miners') }}" class="btn btn-info">
+                        <i class="fas fa-users"></i> View Miners
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    code {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        background-color: #f8f9fa;
+        padding: 2px 4px;
+        border-radius: 3px;
+        color: #e83e8c;
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    .card-title {
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    .display-4 {
+        font-size: 2rem;
+    }
+</style>
+{% endblock %}

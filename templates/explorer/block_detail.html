@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Block #{{ block.id }}</h2>
+        <div class="badge bg-dark text-white p-2">
+            {% if block.candidate_id %}Vote Block{% else %}Mining Reward{% endif %}
+        </div>
+    </div>
+
+    <!-- Block Information Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h4 class="mb-0">Block Information</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <strong class="d-block mb-1">Hash:</strong>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace"
+                                   value="{{ block.hash }}" readonly id="blockHash">
+                            <button class="btn btn-outline-secondary"
+                                    onclick="copyToClipboard('blockHash')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong class="d-block mb-1">Previous Hash:</strong>
+                        {% if block.previous_hash != '0' %}
+                        <a href="{{ url_for('block_detail', block_hash=block.previous_hash) }}"
+                           class="text-decoration-none">
+                            <code class="d-block text-truncate" style="max-width: 100%">{{ block.previous_hash }}</code>
+                        </a>
+                        {% else %}
+                        <code class="d-block">Genesis Block</code>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <strong class="d-block mb-1">Miner Address:</strong>
+                        <a href="{{ url_for('address_detail', address=block.miner_address) }}"
+                           class="text-decoration-none">
+                            <span class="badge bg-secondary">{{ block.miner_address }}</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <strong class="d-block mb-1">Timestamp:</strong>
+                        <span>{{ block.timestamp }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong class="d-block mb-1">Nonce:</strong>
+                        <span class="badge bg-info text-dark">{{ block.nonce }}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong class="d-block mb-1">Difficulty:</strong>
+                        <span class="badge bg-warning text-dark">{{ DIFFICULTY }} leading zeros</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h4 class="mb-0">Transaction Details</h4>
+        </div>
+        <div class="card-body">
+            {% if block.candidate_id %}
+            <div class="mb-3">
+                <strong class="d-block mb-1">Type:</strong>
+                <span class="badge bg-success">Vote Transaction</span>
+            </div>
+
+            <div class="mb-3">
+                <strong class="d-block mb-1">Voter Address:</strong>
+                <a href="{{ url_for('address_detail', address=block.voter_id) }}"
+                   class="text-decoration-none">
+                    <span class="badge bg-primary">{{ block.voter_id }}</span>
+                </a>
+            </div>
+
+            <div class="mb-3">
+                <strong class="d-block mb-1">Candidate:</strong>
+                <span class="badge bg-success">{{ block.candidate_name }}</span>
+            </div>
+            {% else %}
+            <div class="mb-3">
+                <strong class="d-block mb-1">Type:</strong>
+                <span class="badge bg-warning text-dark">Mining Reward</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="d-flex justify-content-between">
+        {% if prev_block %}
+        <a href="{{ url_for('block_detail', block_hash=prev_block) }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Previous Block
+        </a>
+        {% else %}
+        <span></span> <!-- Empty spacer -->
+        {% endif %}
+
+        <a href="{{ url_for('blockchain') }}" class="btn btn-primary">
+            <i class="fas fa-list me-2"></i>Back to Blockchain
+        </a>
+
+        {% if next_block %}
+        <a href="{{ url_for('block_detail', block_hash=next_block) }}" class="btn btn-outline-primary">
+            Next Block<i class="fas fa-arrow-right ms-2"></i>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function copyToClipboard(elementId) {
+    const copyText = document.getElementById(elementId);
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+
+    // Show tooltip feedback
+    const tooltip = new bootstrap.Tooltip(copyText.nextElementSibling, {
+        title: "Copied!",
+        trigger: "manual"
+    });
+    tooltip.show();
+
+    setTimeout(() => {
+        tooltip.hide();
+    }, 1000);
+}
+</script>
+
+<style>
+    .font-monospace {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    .badge {
+        font-weight: 500;
+        padding: 0.5em 0.75em;
+        font-size: 0.9em;
+        word-break: break-all;
+        text-align: left;
+    }
+    code {
+        background-color: #f8f9fa;
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+    }
+    .input-group-text {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
