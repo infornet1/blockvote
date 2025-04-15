@@ -99,7 +99,7 @@ def mine_block(block_data, miner_address):
     return mining_time
 
 # Voting Routes
-@app.route('/')
+@app.route('/blockvote')
 def index():
     """Show voting interface"""
     try:
